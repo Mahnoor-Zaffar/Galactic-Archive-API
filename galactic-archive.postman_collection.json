@@ -1,0 +1,254 @@
+{
+  "info": {
+    "name": "Galactic Archive API",
+    "description": "A public REST API for querying fictional universe data — characters, planets, species, starships, factions, and events.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://galactic-archive-api.onrender.com/api/v1"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Get Health",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"dev@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": "{{base_url}}/auth/register"
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.token) {",
+                  "  pm.collectionVariables.set('token', json.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@galacticarchive.com\",\n  \"password\": \"admin1234\"\n}"
+            },
+            "url": "{{base_url}}/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Characters",
+      "item": [
+        {
+          "name": "List Characters",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/characters?page=1&limit=10",
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Characters",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/characters?search=vader",
+              "query": [
+                { "key": "search", "value": "vader" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Character by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/characters/{{character_id}}"
+          }
+        },
+        {
+          "name": "Create Character (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Character\",\n  \"height\": 180,\n  \"age\": 30,\n  \"gender\": \"Male\"\n}"
+            },
+            "url": "{{base_url}}/characters"
+          }
+        },
+        {
+          "name": "Update Character (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Character\",\n  \"height\": 185\n}"
+            },
+            "url": "{{base_url}}/characters/{{character_id}}"
+          }
+        },
+        {
+          "name": "Delete Character (Admin)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/characters/{{character_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Planets",
+      "item": [
+        {
+          "name": "List Planets",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/planets"
+          }
+        },
+        {
+          "name": "Get Planet by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/planets/{{planet_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Species",
+      "item": [
+        {
+          "name": "List Species",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/species"
+          }
+        },
+        {
+          "name": "Get Species by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/species/{{species_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Starships",
+      "item": [
+        {
+          "name": "List Starships",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/starships"
+          }
+        },
+        {
+          "name": "Get Starship by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/starships/{{starship_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Factions",
+      "item": [
+        {
+          "name": "List Factions",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/factions"
+          }
+        },
+        {
+          "name": "Get Faction by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/factions/{{faction_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Movies",
+      "item": [
+        {
+          "name": "List Movies",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/movies"
+          }
+        },
+        {
+          "name": "Get Movie by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/movies/{{movie_id}}"
+          }
+        }
+      ]
+    }
+  ]
+}
