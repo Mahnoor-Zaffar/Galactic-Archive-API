@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Alignment {
+  LIGHT
+  DARK
+  NEUTRAL
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Character {
+  id          String   @id @default(uuid())
+  name        String
+  height      Float?
+  age         Int?
+  gender      String?
+  speciesId   String?  @map("species_id")
+  planetId    String?  @map("planet_id")
+  factionId   String?  @map("faction_id")
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  species     Species?       @relation(fields: [speciesId], references: [id])
+  planet      Planet?        @relation(fields: [planetId], references: [id])
+  faction     Faction?       @relation(fields: [factionId], references: [id])
+  movies      CharacterMovie[]
+
+  @@index([name])
+  @@index([speciesId])
+  @@index([planetId])
+  @@index([factionId])
+  @@map("characters")
+}
+
+model Planet {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  climate     String?
+  terrain     String?
+  population  Float?
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  characters Character[]
+
+  @@index([name])
+  @@map("planets")
+}
+
+model Species {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  language    String?
+  lifespan    Int?
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  characters Character[]
+
+  @@index([name])
+  @@map("species")
+}
+
+model Faction {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  alignment   Alignment?
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  characters Character[]
+
+  @@index([name])
+  @@map("factions")
+}
+
+model Starship {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  model        String?
+  manufacturer String?
+  crewCapacity Int?     @map("crew_capacity")
+  speed        Float?
+  description  String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([name])
+  @@map("starships")
+}
+
+model Movie {
+  id          String   @id @default(uuid())
+  title       String   @unique
+  episode     Int?
+  releaseDate DateTime? @map("release_date")
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  characters CharacterMovie[]
+
+  @@index([title])
+  @@map("movies")
+}
+
+model CharacterMovie {
+  characterId String @map("character_id")
+  movieId     String @map("movie_id")
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  movie     Movie     @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@id([characterId, movieId])
+  @@map("character_movies")
+}
