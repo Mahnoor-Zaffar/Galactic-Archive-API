@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -12,7 +13,7 @@ const routes = require('./routes');
 
 const app = express();
 
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(compression());
 app.use(express.json({ limit: '10kb' }));
@@ -24,29 +25,20 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'Galactic Archive API Docs',
 }));
 
-app.get('/', (req, res) => {
-  res.json({
-    name: 'Galactic Archive API',
-    version: '1.0.0',
-    docs: '/api-docs',
-    endpoints: {
-      health: '/api/v1/health',
-      auth: '/api/v1/auth',
-      characters: '/api/v1/characters',
-      planets: '/api/v1/planets',
-      species: '/api/v1/species',
-      starships: '/api/v1/starships',
-      factions: '/api/v1/factions',
-      movies: '/api/v1/movies',
-    },
-  });
-});
+const clientDist = path.join(__dirname, '..', 'client', 'dist');
+app.use(express.static(clientDist));
 
 app.use('/api/', apiLimiter);
 
 app.use('/api/v1', routes);
 
-app.use(notFoundHandler);
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api/')) {
+    return notFoundHandler(req, res, () => {});
+  }
+  res.sendFile(path.join(clientDist, 'index.html'));
+});
+
 app.use(errorConverter);
 app.use(errorHandler);
 
