@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { useAuth } from '../AuthContext'
 import * as api from '../api'
 
 const apiMap = {
@@ -23,56 +24,54 @@ const displayOrder = {
 const fieldLabels = {
   name: 'Name', title: 'Title', height: 'Height (cm)', age: 'Age', gender: 'Gender',
   species: 'Species', planet: 'Homeworld', faction: 'Faction', description: 'Description',
-  movies: 'Movies', climate: 'Climate', terrain: 'Terrain', population: 'Population',
-  language: 'Language', lifespan: 'Lifespan (years)', model: 'Model', manufacturer: 'Manufacturer',
-  crewCapacity: 'Crew Capacity', speed: 'Speed', alignment: 'Alignment', episode: 'Episode',
+  movies: 'Movie Appearances', climate: 'Climate', terrain: 'Terrain', population: 'Population',
+  language: 'Language', lifespan: 'Lifespan', model: 'Model', manufacturer: 'Manufacturer',
+  crewCapacity: 'Crew Capacity', speed: 'Max Speed', alignment: 'Alignment', episode: 'Episode',
   releaseDate: 'Release Date',
 }
 
-const alignmentColors = {
-  LIGHT: '#22c55e',
-  DARK: '#ef4444',
-  NEUTRAL: '#6b7280',
+const imageBg = {
+  characters: 'facc15', planets: '22d3ee', species: 'a78bfa',
+  starships: 'fb923c', factions: 'f472b6', movies: '34d399',
 }
 
-function formatValue(val) {
+function renderValue(val, key) {
   if (val === null || val === undefined) return '—'
-  if (Array.isArray(val)) return val.map((v) => v.name || v.title || v).join(', ') || '—'
-  if (typeof val === 'object' && val.name) return <Link to={`/${val.id ? 'species' : 'planets'}/${val.id}`} className="related-link">{val.name}</Link>
-  if (typeof val === 'object' && val.title) return <Link to={`/movies/${val.id}`} className="related-link">{val.title}</Link>
-  if (typeof val === 'object') return JSON.stringify(val)
-  if (typeof val === 'string' && val.includes('T')) return new Date(val).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-  return val
-}
-
-function renderField(key, value, resource) {
-  if (key === 'alignment' && value) {
-    return (
-      <span className="badge" style={{ backgroundColor: alignmentColors[value] || '#6b7280' }}>
-        {value}
-      </span>
-    )
-  }
-  if (key === 'movies' && Array.isArray(value) && value.length > 0) {
+  if (Array.isArray(val) && val.length > 0) {
     return (
       <div className="movie-list">
-        {value.map((m, i) => (
+        {val.map((m, i) => (
           <Link key={i} to={`/movies/${m.id}`} className="related-link-tag">
-            EP{m.episode || '—'}: {m.title}
+            {m.episode ? `EP${m.episode}: ` : ''}{m.title || m.name}
           </Link>
         ))}
       </div>
     )
   }
-  if (['species', 'planet', 'faction'].includes(key) && value && value.id) {
-    const path = key === 'species' ? 'species' : key === 'planet' ? 'planets' : 'factions'
-    return <Link to={`/${path}/${value.id}`} className="related-link">{value.name}</Link>
-  }
-  return formatValue(value)
+  if (key === 'releaseDate' && typeof val === 'string')
+    return new Date(val).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  if (key === 'population' && typeof val === 'number' && val > 1_000_000)
+    return `${(val / 1_000_000).toFixed(1)} million`
+  if (key === 'crewCapacity' && typeof val === 'number')
+    return val.toLocaleString()
+  if (key === 'speed' && typeof val === 'number')
+    return `${val} km/h`
+  if (key === 'height' && typeof val === 'number')
+    return `${val} cm`
+  if (key === 'age' && typeof val === 'number')
+    return `${val} years`
+  if (key === 'lifespan' && typeof val === 'number')
+    return `${val} years`
+  if (typeof val === 'object' && val.name)
+    return <Link to={`/${key === 'planet' ? 'planets' : key === 'species' ? 'species' : 'factions'}/${val.id}`} className="related-link">{val.name}</Link>
+  if (key === 'alignment')
+    return <span className={`align-badge align-${val?.toLowerCase()}`}>{val}</span>
+  return val
 }
 
 export default function ResourceDetail({ resource }) {
   const { id } = useParams()
+  const { isAdmin, token } = useAuth()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -92,20 +91,32 @@ export default function ResourceDetail({ resource }) {
 
   const title = data.name || data.title
   const fields = displayOrder[resource]
+  const imgUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(title)}&background=${imageBg[resource]}&color=fff&size=200&bold=true&font-size=0.5`
 
   return (
     <div className="detail-page">
       <Link to={`/${resource}`} className="back-link">← Back to {resource}</Link>
       <div className="detail-card">
-        <h1 className="detail-title">{title}</h1>
+        <div className="detail-hero">
+          <img src={imgUrl} alt={title} className="detail-img" />
+          <div>
+            <h1 className="detail-title">{title}</h1>
+            {resource === 'characters' && data.faction && (
+              <span className={`align-badge align-${data.faction.alignment?.toLowerCase()}`}>
+                {data.faction.alignment}
+              </span>
+            )}
+          </div>
+        </div>
         <div className="detail-fields">
           {fields.map((f) => {
             const val = data[f]
-            if (val === null || val === undefined || (Array.isArray(val) && val.length === 0)) return null
+            const rendered = renderValue(val, f)
+            if (rendered === null || rendered === '—' || (Array.isArray(val) && val.length === 0)) return null
             return (
               <div key={f} className="detail-field">
                 <span className="detail-label">{fieldLabels[f] || f}</span>
-                <span className="detail-value">{renderField(f, val, resource)}</span>
+                <span className="detail-value">{rendered}</span>
               </div>
             )
           })}

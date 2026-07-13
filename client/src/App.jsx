@@ -1,7 +1,12 @@
 import { Routes, Route, NavLink } from 'react-router-dom'
+import { useAuth } from './AuthContext'
+import StarField from './components/StarField'
 import Home from './pages/Home'
 import ResourceList from './pages/ResourceList'
 import ResourceDetail from './pages/ResourceDetail'
+import Stats from './pages/Stats'
+import Compare from './pages/Compare'
+import Admin from './pages/Admin'
 
 const resources = [
   { path: 'characters', label: 'Characters', color: '#facc15' },
@@ -13,8 +18,11 @@ const resources = [
 ]
 
 export default function App() {
+  const { user, signOut } = useAuth()
+
   return (
     <div className="app">
+      <StarField />
       <header className="header">
         <NavLink to="/" className="logo">
           <span className="logo-icon">✦</span>
@@ -26,30 +34,53 @@ export default function App() {
               key={r.path}
               to={`/${r.path}`}
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-              style={({ isActive }) => isActive ? { borderBottomColor: r.color, color: r.color } : {}}
+              style={({ isActive }) => (isActive ? { borderBottomColor: r.color, color: r.color } : {})}
             >
               {r.label}
             </NavLink>
           ))}
+          <NavLink to="/stats" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Stats</NavLink>
+          <NavLink to="/compare" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Compare</NavLink>
         </nav>
+        <div className="header-right">
+          {user ? (
+            <div className="header-user">
+              <span className="header-email">{user.email}</span>
+              <button onClick={signOut} className="btn btn-pagination btn-sm">Logout</button>
+            </div>
+          ) : (
+            <NavLink to="/admin" className="btn btn-pagination btn-sm">Login</NavLink>
+          )}
+        </div>
       </header>
 
       <main className="main">
         <Routes>
           <Route path="/" element={<Home />} />
           {resources.map((r) => (
-            <Route key={r.path} path={`/${r.path}`} element={<ResourceList resource={r.path} label={r.label} color={r.color} />} />
+            <Route
+              key={r.path}
+              path={`/${r.path}`}
+              element={<ResourceList resource={r.path} label={r.label} color={r.color} />}
+            />
           ))}
           {resources.map((r) => (
-            <Route key={`${r.path}-detail`} path={`/${r.path}/:id`} element={<ResourceDetail resource={r.path} />} />
+            <Route
+              key={`${r.path}-detail`}
+              path={`/${r.path}/:id`}
+              element={<ResourceDetail resource={r.path} />}
+            />
           ))}
+          <Route path="/stats" element={<Stats />} />
+          <Route path="/compare" element={<Compare />} />
+          <Route path="/admin" element={<Admin />} />
         </Routes>
       </main>
 
       <footer className="footer">
         <span>Galactic Archive API</span>
-        <a href="https://github.com/Mahnoor-Zaffar/Galactic-Archive-API" target="_blank" rel="noopener noreferrer">GitHub</a>
-        <a href="https://galactic-archive-api.onrender.com/api-docs" target="_blank" rel="noopener noreferrer">API Docs</a>
+        <a href="https://github.com/Mahnoor-Zaffar/Galactic-Archive-API" target="_blank" rel="noreferrer">GitHub</a>
+        <a href="https://galactic-archive-api.onrender.com/api-docs" target="_blank" rel="noreferrer">API Docs</a>
       </footer>
     </div>
   )

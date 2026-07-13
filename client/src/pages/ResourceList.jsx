@@ -1,71 +1,126 @@
 import { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { useAuth } from '../AuthContext'
 import * as api from '../api'
 
-const apiMap = {
-  characters: { fetch: api.getCharacters, fields: ['name', 'species', 'planet', 'faction'], image: (d) => null },
-  planets: { fetch: api.getPlanets, fields: ['name', 'climate', 'terrain', 'population'], image: (d) => null },
-  species: { fetch: api.getSpecies, fields: ['name', 'language', 'lifespan'], image: (d) => null },
-  starships: { fetch: api.getStarships, fields: ['name', 'model', 'manufacturer', 'crewCapacity'], image: (d) => null },
-  factions: { fetch: api.getFactions, fields: ['name', 'alignment', 'description'], image: (d) => null },
-  movies: { fetch: api.getMovies, fields: ['title', 'episode', 'releaseDate'], image: (d) => null },
+const configs = {
+  characters: {
+    fetch: api.getCharacters,
+    fields: ['name', 'species', 'planet', 'faction'],
+    image: (d) => `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=facc15&color=fff&size=80&bold=true`,
+    filterFields: ['speciesId', 'planetId', 'factionId'],
+  },
+  planets: {
+    fetch: api.getPlanets,
+    fields: ['name', 'climate', 'terrain', 'population'],
+    image: (d) => `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=22d3ee&color=fff&size=80&bold=true`,
+    filterFields: ['climate'],
+  },
+  species: {
+    fetch: api.getSpecies,
+    fields: ['name', 'language', 'lifespan'],
+    image: (d) => `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=a78bfa&color=fff&size=80&bold=true`,
+    filterFields: ['language'],
+  },
+  starships: {
+    fetch: api.getStarships,
+    fields: ['name', 'model', 'manufacturer', 'crewCapacity'],
+    image: (d) => `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=fb923c&color=fff&size=80&bold=true`,
+    filterFields: ['manufacturer'],
+  },
+  factions: {
+    fetch: api.getFactions,
+    fields: ['name', 'alignment'],
+    image: (d) => `https://ui-avatars.com/api/?name=${encodeURIComponent(d.name)}&background=f472b6&color=fff&size=80&bold=true`,
+    filterFields: ['alignment'],
+  },
+  movies: {
+    fetch: api.getMovies,
+    fields: ['title', 'episode', 'releaseDate'],
+    image: (d) => `https://ui-avatars.com/api/?name=${encodeURIComponent(d.title)}&background=34d399&color=fff&size=80&bold=true`,
+    filterFields: [],
+  },
 }
 
-const alignmentColors = {
-  LIGHT: '#22c55e',
-  DARK: '#ef4444',
-  NEUTRAL: '#6b7280',
-}
+const alignmentBgs = { LIGHT: '#22c55e', DARK: '#ef4444', NEUTRAL: '#6b7280' }
 
-function formatValue(val) {
+function fmt(val) {
   if (val === null || val === undefined) return '—'
   if (typeof val === 'object' && val.name) return val.name
   if (typeof val === 'object' && val.title) return val.title
   if (typeof val === 'string' && val.includes('T')) return new Date(val).toLocaleDateString()
-  if (typeof val === 'number' && val > 1000000) return `${(val / 1000000).toFixed(1)}M`
-  if (typeof val === 'number' && val > 1000) return `${(val / 1000).toFixed(1)}K`
+  if (typeof val === 'number' && val > 1_000_000) return `${(val / 1_000_000).toFixed(1)}M`
+  if (typeof val === 'number' && val > 1_000) return `${(val / 1_000).toFixed(1)}K`
   return val
 }
 
-function getTitle(data, resource) {
-  if (resource === 'movies') return data.title
-  return data.name
-}
+function title(d, r) { return r === 'movies' ? d.title : d.name }
 
 export default function ResourceList({ resource, label, color }) {
+  const { isAdmin, token } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [options, setOptions] = useState({})
 
   const page = searchParams.get('page') || '1'
   const search = searchParams.get('search') || ''
-  const config = apiMap[resource]
+  const cfg = configs[resource]
 
   useEffect(() => {
+    const q = { page, limit: 12, search }
+    cfg.filterFields.forEach((f) => {
+      const v = searchParams.get(f)
+      if (v) q[f] = v
+    })
     setLoading(true)
-    config.fetch({ page, limit: 12, search })
-      .then(setData)
-      .finally(() => setLoading(false))
-  }, [page, search])
+    cfg.fetch(q).then(setData).finally(() => setLoading(false))
+  }, [page, search, searchParams.toString()])
 
-  const updateParams = (key, value) => {
-    const next = new URLSearchParams(searchParams)
-    if (value) next.set(key, value)
-    else next.delete(key)
-    if (key === 'search') next.delete('page')
-    setSearchParams(next)
+  useEffect(() => {
+    if (cfg.filterFields.length > 0) {
+      api.getCharacters({ limit: 100 }).then((d) => {
+        setOptions({ species: d.data || [] })
+      })
+    }
+  }, [])
+
+  const upd = (k, v) => {
+    const n = new URLSearchParams(searchParams)
+    if (v) n.set(k, v); else n.delete(k)
+    if (k !== 'page') n.delete('page')
+    setSearchParams(n)
   }
+
+  const filters = cfg.filterFields.map((f) => ({
+    key: f,
+    label: f.replace('Id', '').replace(/([A-Z])/g, ' $1').trim(),
+    value: searchParams.get(f) || '',
+  }))
+
+  const filteredData = data?.data || []
+  const pagination = data?.pagination
 
   return (
     <div className="resource-page">
       <div className="resource-header">
         <h1 style={{ color }}>{label}</h1>
         <div className="resource-controls">
+          {filters.map((f) => (
+            <input
+              key={f.key}
+              type="text"
+              placeholder={`Filter by ${f.label}...`}
+              value={f.value}
+              onChange={(e) => upd(f.key, e.target.value)}
+              className="search-input filter-input"
+            />
+          ))}
           <input
             type="text"
             placeholder={`Search ${label.toLowerCase()}...`}
             value={search}
-            onChange={(e) => updateParams('search', e.target.value)}
+            onChange={(e) => upd('search', e.target.value)}
             className="search-input"
           />
         </div>
@@ -75,53 +130,55 @@ export default function ResourceList({ resource, label, color }) {
 
       {data && (
         <>
-          {data.data?.length === 0 ? (
+          {filteredData.length === 0 ? (
             <div className="empty">No {label.toLowerCase()} found.</div>
           ) : (
             <div className="card-grid">
-              {data.data.map((item) => (
+              {filteredData.map((item) => (
                 <Link to={`/${resource}/${item.id}`} key={item.id} className="card" style={{ borderTopColor: color }}>
-                  <div className="card-emoji">{resource === 'characters' ? '👤' : resource === 'planets' ? '🌍' : resource === 'species' ? '🧬' : resource === 'starships' ? '🚀' : resource === 'factions' ? '⚔️' : '🎬'}</div>
-                  <h3 className="card-title">{getTitle(item, resource)}</h3>
-                  {resource === 'factions' && item.alignment && (
-                    <span className="badge" style={{ backgroundColor: alignmentColors[item.alignment] || '#6b7280' }}>
-                      {item.alignment}
-                    </span>
-                  )}
+                  <div className="card-img-wrap">
+                    <img src={cfg.image(item)} alt={title(item, resource)} className="card-img" />
+                    {resource === 'factions' && item.alignment && (
+                      <span className="badge" style={{ backgroundColor: alignmentBgs[item.alignment] || '#6b7280' }}>
+                        {item.alignment}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="card-title">{title(item, resource)}</h3>
                   <div className="card-fields">
-                    {config.fields.slice(1).map((f) => (
-                      item[f] && (
+                    {cfg.fields.slice(1).map((f) =>
+                      item[f] ? (
                         <div key={f} className="card-field">
                           <span className="card-field-label">{f.replace(/([A-Z])/g, ' $1').trim()}</span>
-                          <span className="card-field-value">{formatValue(item[f])}</span>
+                          <span className="card-field-value">{fmt(item[f])}</span>
                         </div>
-                      )
-                    ))}
+                      ) : null
+                    )}
                   </div>
                 </Link>
               ))}
             </div>
           )}
 
-          <div className="pagination">
-            <button
-              disabled={!data.pagination?.hasPrevPage}
-              onClick={() => updateParams('page', String(parseInt(page) - 1))}
-              className="btn btn-pagination"
-            >
-              ← Prev
-            </button>
-            <span className="page-info">
-              Page {data.pagination?.page} of {data.pagination?.totalPages}
-            </span>
-            <button
-              disabled={!data.pagination?.hasNextPage}
-              onClick={() => updateParams('page', String(parseInt(page) + 1))}
-              className="btn btn-pagination"
-            >
-              Next →
-            </button>
-          </div>
+          {pagination && (
+            <div className="pagination">
+              <button
+                disabled={!pagination.hasPrevPage}
+                onClick={() => upd('page', String(parseInt(page) - 1))}
+                className="btn btn-pagination"
+              >
+                ← Prev
+              </button>
+              <span className="page-info">Page {pagination.page} of {pagination.totalPages}</span>
+              <button
+                disabled={!pagination.hasNextPage}
+                onClick={() => upd('page', String(parseInt(page) + 1))}
+                className="btn btn-pagination"
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>
