@@ -2,8 +2,7 @@
   <img src="https://img.shields.io/badge/status-live-brightgreen" alt="Status">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
-  <img src="https://img.shields.io/badge/tests-12%2F12-passing-brightgreen" alt="Tests">
-  <img src="https://img.shields.io/badge/coverage-92%25-yellow" alt="Coverage">
+  <img src="https://github.com/Mahnoor-Zaffar/Galactic-Archive-API/actions/workflows/ci.yml/badge.svg" alt="CI">
   <img src="https://img.shields.io/badge/PRs-welcome-orange" alt="PRs">
 </p>
 
