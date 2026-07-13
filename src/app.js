@@ -7,6 +7,7 @@ const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const { environment } = require('./config/environment');
+const ApiError = require('./utils/ApiError');
 const { errorConverter, errorHandler, notFoundHandler } = require('./middleware/error.middleware');
 const { apiLimiter } = require('./middleware/rateLimiter.middleware');
 const routes = require('./routes');
@@ -32,9 +33,9 @@ app.use('/api/', apiLimiter);
 
 app.use('/api/v1', routes);
 
-app.get('*', (req, res) => {
+app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) {
-    return notFoundHandler(req, res, () => {});
+    return next(new ApiError(404, `Route not found: ${req.method} ${req.originalUrl}`));
   }
   res.sendFile(path.join(clientDist, 'index.html'));
 });
